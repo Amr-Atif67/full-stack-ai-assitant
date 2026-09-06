@@ -1,0 +1,79 @@
+@page "/fetchproducts"
+@using ClientApp.Services
+@using ClientApp.Models
+@inject ProductService ProductService
+
+<h3>Product List</h3>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">
+        @errorMessage
+    </div>
+}
+else if (products != null)
+{
+    <div class="mb-3 d-flex align-items-center gap-2">
+        <button class="btn btn-outline-primary btn-sm" @onclick="RefreshProductsAsync">
+            Refresh Data
+        </button>
+        @if (isCached)
+        {
+            <span class="badge bg-info text-dark">Loaded from Client Cache (Copilot Optimization)</span>
+        }
+    </div>
+    <ul class="list-group mb-3">
+        @foreach (var product in products)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>@product.Name</strong> - $@product.Price (Stock: @product.Stock)
+                </div>
+                @if (product.Category != null)
+                {
+                    <span class="badge bg-secondary">Category: @product.Category.Name</span>
+                }
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <p><em>Loading products...</em></p>
+}
+
+@code {
+    private Product[]? products;
+    private string? errorMessage;
+    private bool isCached;
+
+    /*
+     * Copilot Integration & Optimization Note:
+     * Copilot suggested delegating API interaction to ProductService to eliminate redundant HTTP requests
+     * across page re-renders while properly parsing nested JSON responses (Category object).
+     */
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProductsAsync();
+    }
+
+    private async Task LoadProductsAsync(bool forceRefresh = false)
+    {
+        try
+        {
+            errorMessage = null;
+            isCached = !forceRefresh && ProductService.HasValidCache();
+            products = await ProductService.GetProductsAsync(forceRefresh);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching product list: {ex.Message}");
+            errorMessage = $"Failed to load products: {ex.Message}";
+        }
+    }
+
+    private async Task RefreshProductsAsync()
+    {
+        await LoadProductsAsync(forceRefresh: true);
+    }
+}
